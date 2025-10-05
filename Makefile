@@ -1,45 +1,38 @@
-# Top-level Makefile
-CC      := gcc
-CFLAGS  := -Wall -Wextra -std=c11 -g
-TARGET  := ls-v1.2.0
+# Compiler and flags
+CC = gcc
+CFLAGS = -Wall -Wextra -std=c11 -g
 
-SRC_DIR := src
-OBJ_DIR := obj
-BIN_DIR := bin
+# Directories
+SRC_DIR = src
+OBJ_DIR = obj
+BIN_DIR = bin
 
-SRCS := $(wildcard $(SRC_DIR)/*.c)
-OBJS := $(patsubst $(SRC_DIR)/%.c,$(OBJ_DIR)/%.o,$(SRCS))
-BIN  := $(BIN_DIR)/$(TARGET)
+# Source and target
+SRC = $(SRC_DIR)/ls-v1.3.0.c
+OBJ = $(OBJ_DIR)/ls-v1.3.0.o
+TARGET = $(BIN_DIR)/ls-v1.3.0
 
-.PHONY: all clean dirs run
+# Default target
+all: $(TARGET)
 
-all: dirs $(BIN)
+# Create obj directory if it doesn't exist
+$(OBJ_DIR):
+	mkdir -p $(OBJ_DIR)
 
-# Link final binary from object files
-$(BIN): $(OBJS)
-	@echo "Linking -> $@"
-	$(CC) $(CFLAGS) -o $@ $^
+# Create bin directory if it doesn't exist
+$(BIN_DIR):
+	mkdir -p $(BIN_DIR)
 
-# Compile .c -> obj/.o
-$(OBJ_DIR)/%.o: $(SRC_DIR)/%.c
-	@echo "Compiling $< -> $@"
+# Compile .c -> .o
+$(OBJ): $(SRC) | $(OBJ_DIR)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-# Ensure directories exist
-dirs:
-	@mkdir -p $(OBJ_DIR) $(BIN_DIR)
+# Link .o -> executable
+$(TARGET): $(OBJ) | $(BIN_DIR)
+	$(CC) $(CFLAGS) -o $@ $^
 
-# Run the program (convenience)
-run: all
-	@echo "Running $(BIN)"
-	$(BIN)
-
+# Clean build artifacts
 clean:
-	@echo "Cleaning..."
-	@rm -rf $(OBJ_DIR) $(BIN_DIR)
+	rm -rf $(OBJ_DIR)/*.o $(BIN_DIR)/ls-v1.2.0
 
-# Print variables (debug)
-print:
-	@echo "SRCS = $(SRCS)"
-	@echo "OBJS = $(OBJS)"
-	@echo "BIN  = $(BIN)"
+.PHONY: all clean
