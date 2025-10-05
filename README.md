@@ -27,10 +27,18 @@ The project demonstrates deep understanding of:
 ├── Makefile
 ├── man
 ├── obj
+│   └── ls-v1.0.0.o
+│   └── ls-v1.1.0.o
+│   └── ls-v1.2.0.o
+│   └── ls-v1.3.0.o
+│   └── ls-v1.4.0.o
+│   └── ls-v1.5.0.o
 │   └── ls-v1.6.0.o
 ├── REPORT.md
 └── src
     ├── ls-v1.1.0.c
+    ├── ls-v1.2.0.c
+    ├── ls-v1.3.0.c
     ├── ls-v1.4.0.c
     ├── ls-v1.5.0.c
     └── ls-v1.6.0.c
