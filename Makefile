@@ -1,14 +1,45 @@
-CC = gcc
-CFLAGS = -Wall -Wextra -g
-SRC = src/lsv1.0.0.c
-OBJ = obj/lsv1.0.0.o
-BIN = bin/ls
+# Top-level Makefile
+CC      := gcc
+CFLAGS  := -Wall -Wextra -std=c11 -g
+TARGET  := ls-v1.2.0
 
-$(BIN): $(OBJ)
-	$(CC) $(CFLAGS) -o $(BIN) $(OBJ)
+SRC_DIR := src
+OBJ_DIR := obj
+BIN_DIR := bin
 
-$(OBJ): $(SRC)
-	$(CC) $(CFLAGS) -c $(SRC) -o $(OBJ)
+SRCS := $(wildcard $(SRC_DIR)/*.c)
+OBJS := $(patsubst $(SRC_DIR)/%.c,$(OBJ_DIR)/%.o,$(SRCS))
+BIN  := $(BIN_DIR)/$(TARGET)
+
+.PHONY: all clean dirs run
+
+all: dirs $(BIN)
+
+# Link final binary from object files
+$(BIN): $(OBJS)
+	@echo "Linking -> $@"
+	$(CC) $(CFLAGS) -o $@ $^
+
+# Compile .c -> obj/.o
+$(OBJ_DIR)/%.o: $(SRC_DIR)/%.c
+	@echo "Compiling $< -> $@"
+	$(CC) $(CFLAGS) -c $< -o $@
+
+# Ensure directories exist
+dirs:
+	@mkdir -p $(OBJ_DIR) $(BIN_DIR)
+
+# Run the program (convenience)
+run: all
+	@echo "Running $(BIN)"
+	$(BIN)
 
 clean:
-	rm -f $(OBJ) $(BIN)
+	@echo "Cleaning..."
+	@rm -rf $(OBJ_DIR) $(BIN_DIR)
+
+# Print variables (debug)
+print:
+	@echo "SRCS = $(SRCS)"
+	@echo "OBJS = $(OBJS)"
+	@echo "BIN  = $(BIN)"
