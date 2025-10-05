@@ -1,42 +1,36 @@
-# Makefile for ls-v1.5.0 project
-
-# Compiler and flags
-CC      = gcc
-CFLAGS  = -Wall -Wextra -std=c11 -g
-
-# Directories
+# ---------------- CONFIG -----------------
+CC = gcc
+CFLAGS = -Wall -Wextra -std=c11 -g
 SRC_DIR = src
 OBJ_DIR = obj
 BIN_DIR = bin
-
-# Target executable
-TARGET  = $(BIN_DIR)/ls-v1.5.0
+TARGET = $(BIN_DIR)/ls-v1.6.0
 
 # Source and object files
-SRC     = $(SRC_DIR)/ls-v1.5.0.c
-OBJ     = $(OBJ_DIR)/ls-v1.5.0.o
+SRC = $(SRC_DIR)/ls-v1.6.0.c
+OBJ = $(OBJ_DIR)/ls-v1.6.0.o
 
-# Default target
+# ---------------- RULES -----------------
 all: $(TARGET)
 
-# Link object file to create executable
-$(TARGET): $(OBJ) | $(BIN_DIR)
-	$(CC) $(CFLAGS) -o $@ $^
-
-# Compile source file to object file
-$(OBJ): $(SRC) | $(OBJ_DIR)
+# Build object file from source
+$(OBJ_DIR)/%.o: $(SRC_DIR)/%.c | $(OBJ_DIR)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-# Create necessary directories
+# Build executable from object file
+$(TARGET): $(OBJ) | $(BIN_DIR)
+	$(CC) $(CFLAGS) $(OBJ) -o $@
+
+# Create directories if they don't exist
 $(OBJ_DIR):
 	mkdir -p $(OBJ_DIR)
 
 $(BIN_DIR):
 	mkdir -p $(BIN_DIR)
 
-# Clean build files
+# Clean build artifacts
 clean:
-	rm -rf $(OBJ_DIR)/*.o $(TARGET)
+	rm -rf $(OBJ_DIR)/*.o $(BIN_DIR)/ls-v1.6.0
 
 # Phony targets
 .PHONY: all clean
