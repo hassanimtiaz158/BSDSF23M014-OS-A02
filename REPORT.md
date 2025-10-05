@@ -1,194 +1,96 @@
-## **Report Questions**
-
----
-## **Feature:2**
-
-### **Question 1 – Difference between `stat()` and `lstat()`**
-
-Both `stat()` and `lstat()` are system calls used to get information about files, but the **main difference** is how they handle **symbolic links**.
-
-| Function | Description |
-|-----------|--------------|
-| `stat(path, &buf)` | Returns information about the **file that the path points to**. If it’s a symbolic link, it follows the link and gives details about the **target file**. |
-| `lstat(path, &buf)` | Returns information about the **link itself**, not the target file. So, if `path` is a symbolic link, it shows info about the **link** (like its size and permissions). |
-
-#### 💡 Example
-If you have a symbolic link `link.txt` pointing to `file.txt`:
-
-- `stat("link.txt", &buf)` → info about `file.txt` (target)  
-- `lstat("link.txt", &buf)` → info about `link.txt` (the link)
-
-**In the `ls -l` command:**  
-We use **`lstat()`** so that symbolic links are displayed with their own details, not the file they point to.
+## **Report Questions: Directory Reading and qsort Comparison Function**
 
 ---
 
-### **Question 2 – Using `st_mode` to Get File Type and Permissions**
+### **1. Why Must All Directory Entries Be Read into Memory Before Sorting?**
 
-The `st_mode` field in the `struct stat` (from `<sys/stat.h>`) stores **two kinds of information**:
+When implementing file listing programs (like `ls`), it is necessary to **read all directory entries into memory** before sorting them. This is because sorting algorithms (like `qsort`) need access to the **entire dataset** to compare and order all items relative to one another.
 
-1. **File Type** – what kind of file it is (regular file, directory, link, etc.)  
-2. **Permissions** – read, write, execute permissions for owner, group, and others
+#### **Reasoning:**
+- Functions such as `readdir()` read directory entries **sequentially** from the filesystem.
+- Once an entry is read, there is no direct way to “go back” to previous entries without re-opening and re-reading the directory.
+- Sorting requires **random access** to all entries (for comparisons and swaps), which is only possible if they are stored in memory first.
+
+#### **Typical Steps:**
+1. Use `opendir()` to open the directory.
+2. Use `readdir()` in a loop to read each entry.
+3. Store all filenames (or `struct dirent` pointers) into an array.
+4. Call `qsort()` to sort that array.
+5. Print or process the sorted entries.
+
+#### **Potential Drawbacks:**
+For directories with **millions of files**, this approach can become inefficient:
+
+| Issue | Description |
+|--------|--------------|
+| **High Memory Usage** | Each entry (name, metadata) consumes RAM. Millions of files may exceed available memory. |
+| **Performance Overhead** | Copying and sorting a huge array takes time (O(n log n) complexity). |
+| **Scalability Limits** | Programs may slow down or fail due to memory exhaustion on systems with limited resources. |
+
+In short, reading all entries first is **necessary for sorting**, but **memory-intensive** for extremely large directories.
 
 ---
 
-### **1️⃣ Checking File Type**
+### **2. Purpose and Signature of the `qsort()` Comparison Function**
 
-You can find the file type by comparing `(mode & S_IFMT)` with specific macros:
+The C standard library function `qsort()` (from `<stdlib.h>`) is a **generic sorting function** that can sort any type of array.
 
-| Macro | Meaning |
-|--------|----------|
-| `S_IFREG` | Regular file |
-| `S_IFDIR` | Directory |
-| `S_IFLNK` | Symbolic link |
-| `S_IFCHR` | Character device |
-| `S_IFBLK` | Block device |
-| `S_IFIFO` | FIFO (pipe) |
-| `S_IFSOCK` | Socket |
-
-#### **Example Code:**
+#### **Function Signature:**
 ```c
-#include <stdio.h>
-#include <sys/stat.h>
+void qsort(void *base, size_t nitems, size_t size,
+            int (*compar)(const void *, const void *));
+```
 
-void print_file_type(mode_t mode) {
-    if (S_ISREG(mode))   printf("Regular file\n");
-    else if (S_ISDIR(mode))  printf("Directory\n");
-    else if (S_ISLNK(mode))  printf("Symbolic link\n");
-    else if (S_ISCHR(mode))  printf("Character device\n");
-    else if (S_ISBLK(mode))  printf("Block device\n");
-    else if (S_ISFIFO(mode)) printf("FIFO/pipe\n");
-    else if (S_ISSOCK(mode)) printf("Socket\n");
-    else printf("Unknown type\n");
+- **`base`** → Pointer to the first element of the array.
+- **`nitems`** → Number of elements to sort.
+- **`size`** → Size (in bytes) of each element.
+- **`compar`** → Pointer to a comparison function that defines sorting order.
+
+---
+
+### **Comparison Function Details**
+The comparison function tells `qsort()` **how to compare two elements**. It is called repeatedly by `qsort()` to decide ordering.
+
+#### **Signature of the Comparison Function:**
+```c
+int compare(const void *a, const void *b);
+```
+
+#### **How It Works:**
+- The function receives **two pointers** to the elements being compared.
+- It must **cast** these `void*` pointers to the correct type (e.g., `char*`, `struct dirent*`).
+- It returns:
+  - `< 0` if `a` should come before `b`
+  - `0` if they are equal
+  - `> 0` if `a` should come after `b`
+
+#### **Example: Sorting Filenames Alphabetically**
+```c
+int compare_names(const void *a, const void *b) {
+    const char *name1 = *(const char **)a;
+    const char *name2 = *(const char **)b;
+    return strcmp(name1, name2);
 }
+```
 
-int main(int argc, char *argv[]) {
-    if (argc != 2) {
-        printf("Usage: %s <filename>\n", argv[0]);
-        return 1;
-    }
-
-    struct stat info;
-    if (stat(argv[1], &info) == -1) {
-        perror("stat");
-        return 1;
-    }
-
-    printf("File: %s\n", argv[1]);
-    print_file_type(info.st_mode);
-
-    return 0;
-}
+This function can then be passed to `qsort()` like this:
+```c
+qsort(file_list, file_count, sizeof(char *), compare_names);
 ```
 
 ---
 
-### **2️⃣ Checking Permissions**
+### **Why `const void *` Arguments Are Required**
+- `qsort()` is **generic** — it can sort arrays of any data type.
+- Using `const void *` allows it to accept and compare **any type of element**.
+- The `const` ensures the comparison function **does not modify** the data while sorting.
 
-Each permission is represented by a specific bit in `st_mode`:
-
-| Symbol | Meaning | Bitmask |
-|:--:|:--|:--|
-| `r` | Read | `S_IRUSR`, `S_IRGRP`, `S_IROTH` |
-| `w` | Write | `S_IWUSR`, `S_IWGRP`, `S_IWOTH` |
-| `x` | Execute | `S_IXUSR`, `S_IXGRP`, `S_IXOTH` |
-
-#### **Example (Printing Permissions):**
-```c
-printf("Owner: %c%c%c\n",
-       (info.st_mode & S_IRUSR) ? 'r' : '-',
-       (info.st_mode & S_IWUSR) ? 'w' : '-',
-       (info.st_mode & S_IXUSR) ? 'x' : '-');
-```
+This design provides **type flexibility and data safety**, making `qsort()` a universal sorting utility in C.
 
 ---
 
 ### ✅ **Summary**
-- `stat()` → info about the **target file**.  
-- `lstat()` → info about the **symbolic link itself**.  
-- `st_mode` → contains **file type + permission bits**.  
-- Use macros like `S_ISDIR()`, `S_IRUSR` to check type and permissions.
-
-
-## **Feature:3**
-
-## **Report Questions: Columnar Output and ioctl System Call**
-
----
-
-### **1. Logic for Printing Items in a 'Down Then Across' Columnar Format**
-
-When printing items (like filenames) in a columnar format similar to the Unix `ls` command, the goal is to display the list efficiently across multiple columns based on the terminal width.
-
-#### **General Logic:**
-1. **Determine the number of rows and columns:**
-   - Find the **longest filename length**.
-   - Use the **terminal width** to calculate how many columns can fit.
-   - Compute the number of rows needed to display all items.
-
-2. **Print items down each column:**
-   - Unlike the usual row-major order (across first), we print **down each column** before moving to the next.
-   - For example, if we have 10 filenames and 3 columns, we fill them as:
-     ```
-     file1   file4   file7
-     file2   file5   file8
-     file3   file6   file9
-     ```
-
-3. **Iterate carefully:**
-   - A single loop (e.g., `for i in range(n)`) won’t work because it only processes items linearly, across one dimension.
-   - You need **nested loops**: one for rows and one for columns, calculating the correct index (`index = row + column * rows`).
-
-#### **Why a Single Loop is Insufficient:**
-A simple loop prints filenames one after another (across a single line or column). It cannot manage:
-- The layout structure (rows × columns)
-- Proper alignment of filenames
-- Wrapping based on terminal width
-
-Therefore, **two-dimensional indexing** is required to print “down then across.”
-
----
-
-### **2. Purpose of the `ioctl` System Call in This Context**
-
-The `ioctl` system call is used to **query or control device parameters**. In this context (like in the `ls` implementation), it helps detect the **current terminal size** — specifically, the **number of columns (width)**.
-
-#### **How It’s Used:**
-```c
-#include <sys/ioctl.h>
-#include <stdio.h>
-#include <unistd.h>
-
-struct winsize w;
-ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
-printf("Terminal width: %d columns\n", w.ws_col);
-```
-- `STDOUT_FILENO`: the file descriptor for the terminal output
-- `TIOCGWINSZ`: request code to get the window size
-- `w.ws_col`: gives the number of columns in the terminal
-
-This allows the program to automatically adjust column layout based on the current terminal size.
-
----
-
-### **3. Limitations of Using a Fixed-Width Fallback (e.g., 80 Columns)**
-If the program doesn’t use `ioctl` and instead assumes a **fixed width**, such as 80 columns:
-
-- On **wider terminals**, output will waste space (few columns used).
-- On **narrow terminals**, output may wrap or look misaligned.
-- It won’t adapt if the user resizes the terminal window.
-
-#### **Summary of Limitations:**
-| Problem | Description |
-|----------|--------------|
-| Lack of adaptability | Layout doesn’t adjust to current screen size |
-| Poor readability | Lines may wrap or appear uneven |
-| Inefficient use of space | Wastes space on wide terminals |
-
-Using `ioctl` provides a **dynamic and user-friendly layout** that matches the actual terminal dimensions, making output cleaner and more responsive.
-
-
-
-
-
+- All directory entries must be read into memory to allow sorting algorithms like `qsort()` to access and rearrange them efficiently.
+- This approach can be memory-heavy for very large directories.
+- The `qsort()` function uses a comparison callback that accepts `const void *` arguments to support sorting of **any data type** safely and generically.
 
