@@ -188,6 +188,100 @@ If the program doesn’t use `ioctl` and instead assumes a **fixed width**, such
 Using `ioctl` provides a **dynamic and user-friendly layout** that matches the actual terminal dimensions, making output cleaner and more responsive.
 
 
+## **Feature:4**
+
+## **Report Questions: Display Mode Logic and Implementation Complexity**
+
+---
+
+### **1. Comparison: 'Down Then Across' (Vertical) vs 'Across' (Horizontal) Printing Logic**
+
+When implementing a file listing program (like `ls`), the output can be formatted either **across** (row-wise) or **down then across** (column-wise). These two approaches differ significantly in implementation complexity.
+
+#### **Horizontal ('Across') Printing Logic:**
+- This is the **simpler** approach.
+- The program prints filenames **sequentially** across the screen until it reaches the end of a row (based on terminal width), then moves to the next line.
+- Only basic spacing and wrapping calculations are needed.
+
+##### **Example (across):**
+```
+file1  file2  file3  file4
+file5  file6  file7  file8
+```
+
+**Complexity:** Minimal. A single loop over filenames is enough.
+
+---
+
+#### **Vertical ('Down Then Across') Printing Logic:**
+- This method prints items **down each column first**, then moves across to the next column.
+- To do this, the program must **precompute**:
+  - The **number of columns** that fit in the terminal.
+  - The **number of rows** needed to display all items.
+  - The **exact index** of each item in the list (`index = row + column * rows`).
+- The logic requires **nested loops** and careful indexing to avoid missing or repeating entries.
+
+##### **Example (down then across):**
+```
+file1  file4  file7
+file2  file5  file8
+file3  file6  file9
+```
+
+**Complexity:** Higher — requires more pre-calculation of column count, row count, and precise index mapping.
+
+---
+
+#### **Summary of Complexity Comparison:**
+| Format | Implementation Complexity | Reason |
+|---------|-----------------------------|---------|
+| Across (Horizontal) | Low | Sequential printing using a single loop |
+| Down then Across (Vertical) | High | Requires pre-calculation of rows, columns, and index mapping based on terminal width |
+
+In short, **vertical printing** is more complex because it must organize filenames in a 2D grid before printing, while **horizontal printing** only needs linear iteration.
+
+---
+
+### **2. Strategy for Managing Display Modes (-l, -x, and Default)**
+
+In a typical `ls`-like implementation, different display modes change how files are shown:
+
+| Mode | Description |
+|------|--------------|
+| `-l` | Long listing (detailed file info like permissions, owner, size, date) |
+| `-x` | Across (horizontal) column layout |
+| Default | Down-then-across column layout |
+
+#### **Strategy Used:**
+1. **Parse command-line options** using `getopt()` or manual string checks.
+2. **Store mode flags** (e.g., `flag_l`, `flag_x`, `flag_default`).
+3. **Decide which print function to call** based on the active flag.
+
+##### **Example Pseudocode:**
+```c
+if (flag_l)
+    print_long_format(file_list);
+else if (flag_x)
+    print_across(file_list);
+else
+    print_down_across(file_list);
+```
+
+Each printing function handles formatting independently:
+- `print_long_format()` → calls `lstat()` and displays permissions, size, owner, etc.
+- `print_across()` → prints filenames row-wise (simple spacing logic).
+- `print_down_across()` → prints filenames in vertical columns using precomputed layout.
+
+This modular approach keeps each display mode **separate and maintainable**, while the main function only decides **which mode to trigger**.
+
+---
+
+### ✅ **Summary**
+- The **'down then across'** logic is more complex because it needs **pre-calculation** of grid structure (rows, columns, and indices).
+- The **'across'** logic is simpler — just a single loop with spacing.
+- The program determines display mode (`-l`, `-x`, or default) through **flags**, and calls the corresponding **print function** to handle that format independently.
+
+
 
 
 
