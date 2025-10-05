@@ -134,10 +134,10 @@ It serves as both a **technical report** and **learning documentation** for unde
 ---
 
 ## 👨‍💻 Author
-**Name:** *[Hasan Ali]*  
+**Name:** *Hasan Ali*  
 **Course/Module:** *Operating Systems*  
-**Institution:** *[FCIT]*  
-**Date:** *[October, 2025]*
+**Institution:** *FCIT*  
+**Date:** *October, 2025*
 
 ---
 
