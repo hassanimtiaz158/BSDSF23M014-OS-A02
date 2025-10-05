@@ -1,3 +1,7 @@
+# -----------------------
+# Makefile for ls project
+# -----------------------
+
 # Compiler and flags
 CC = gcc
 CFLAGS = -Wall -Wextra -std=c11 -g
@@ -8,31 +12,32 @@ OBJ_DIR = obj
 BIN_DIR = bin
 
 # Source and target
-SRC = $(SRC_DIR)/ls-v1.3.0.c
-OBJ = $(OBJ_DIR)/ls-v1.3.0.o
-TARGET = $(BIN_DIR)/ls-v1.3.0
+SRC = $(SRC_DIR)/ls-v1.4.0.c
+OBJ = $(OBJ_DIR)/ls-v1.4.0.o
+TARGET = $(BIN_DIR)/ls-v1.4.0
 
 # Default target
 all: $(TARGET)
 
-# Create obj directory if it doesn't exist
+# Create bin and obj directories if they don't exist
 $(OBJ_DIR):
 	mkdir -p $(OBJ_DIR)
 
-# Create bin directory if it doesn't exist
 $(BIN_DIR):
 	mkdir -p $(BIN_DIR)
 
-# Compile .c -> .o
+# Compile object file
 $(OBJ): $(SRC) | $(OBJ_DIR)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-# Link .o -> executable
+# Link final executable
 $(TARGET): $(OBJ) | $(BIN_DIR)
-	$(CC) $(CFLAGS) -o $@ $^
+	$(CC) $(CFLAGS) $< -o $@
 
 # Clean build artifacts
 clean:
-	rm -rf $(OBJ_DIR)/*.o $(BIN_DIR)/ls-v1.2.0
+	rm -rf $(OBJ_DIR)/*.o $(TARGET)
 
+# Phony targets
 .PHONY: all clean
+
